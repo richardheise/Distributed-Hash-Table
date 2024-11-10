@@ -1,3 +1,14 @@
+/***********************************************************************
+*
+* Autor: Richard Fernando Heise Ferreira
+* Matrícula: 201900121214
+* Data: 11/2024
+* Instituição: Universidade Federal do Paraná
+* Curso: Ciência da Computação
+* Motivo: Trabalho da Disciplina de Desempenho de SGBD
+*
+************************************************************************/
+
 #include <sstream>
 #include "dht.hpp"
 using namespace std;
@@ -7,6 +18,7 @@ using namespace std;
 void readInput(DHT* dht) {
     string line;
     while (getline(cin, line)) {
+         if (line.empty()) { continue; }
         istringstream iss(line);
         int timestamp;
         char operation;
@@ -22,14 +34,14 @@ void readInput(DHT* dht) {
 
         // Processa a operação
         switch (operation) {
-            case 'E': // Entrada de nó
+            case 'E': // Add nodo
                 addNode(dht, node_id);
                 break;
-            case 'S': // Saída de nó
-                // dht.removeNode(node_id);
+            case 'S': // Remove nodo
+                deleteNode(dht, node_id);
                 break;
             case 'I': // Inclusão de chave
-                // dht.insertKey(node_id, key);
+                addKey(dht, key);
                 break;
             case 'L': // Lookup de chave
                 // dht.lookupKey(node_id, key, timestamp);

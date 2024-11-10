@@ -59,6 +59,12 @@ struct DHT {
 void addNode(DHT* dht, int newId);
 void printNode(const node& n);
 void printDHT(const DHT& dht);
+void moveKeys(DHT* dht, int newId);
+map<int, node>::iterator findNode(DHT *dht, int key);
+map<int, node>::iterator findPrevNode(DHT *dht, int node);
+bool is_within_bounds(int start, int value, int end);
+void addKey(DHT* dht, int key);
+void deleteNode(DHT* dht, int nodeId);
 
 
 #endif
