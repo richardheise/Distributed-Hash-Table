@@ -4,21 +4,20 @@
 * Matrícula: 201900121214
 * Data: 11/2024
 * Instituição: Universidade Federal do Paraná
-* Curso: Ciência da Computação
+* Curso: Mestrado em Segurança da Computação - PPG-Inf
 * Motivo: Trabalho da Disciplina de Desempenho de SGBD
 *
 ************************************************************************/
 
 #include <sstream>
-#include "dht.hpp"
+#include "dht.cpp" // Inclui o arquivo de cabeçalho da DHT
 using namespace std;
 
-
-// Função para ler e processar a entrada
-void readInput(DHT* dht) {
+int main() {
+    DHT dht; // Instanciação do objeto DHT
     string line;
     while (getline(cin, line)) {
-         if (line.empty()) { continue; }
+        if (line.empty()) { continue; }
         istringstream iss(line);
         int timestamp;
         char operation;
@@ -28,36 +27,29 @@ void readInput(DHT* dht) {
         // Lê os 3 ou 4 campos da entrada
         iss >> timestamp >> operation >> node_id;
 
+        // Lê a chave apenas para operações de inserção ou lookup
         if (operation == 'I' || operation == 'L') {
-            iss >> key; // Lê a chave apenas para operações de inserção ou lookup
+            iss >> key; 
         }
 
         // Processa a operação
         switch (operation) {
             case 'E': // Add nodo
-                addNode(dht, node_id);
+                dht.addNode(node_id);
                 break;
             case 'S': // Remove nodo
-                deleteNode(dht, node_id);
+                dht.deleteNode(node_id);
                 break;
             case 'I': // Inclusão de chave
-                addKey(dht, key);
+                dht.addKey(key);
                 break;
             case 'L': // Lookup de chave
-                // dht.lookupKey(node_id, key, timestamp);
+                dht.lookupKey(timestamp, node_id, key);
                 break;
             default:
                 cerr << "Operação desconhecida: " << operation << endl;
                 break;
         }
     }
-}
-
-
-int main() {
-    DHT dht;
-
-    readInput(&dht);
-    printDHT(dht);
     return 0;
 }

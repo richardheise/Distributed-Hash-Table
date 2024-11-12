@@ -4,159 +4,370 @@
 * Matrícula: 201900121214
 * Data: 11/2024
 * Instituição: Universidade Federal do Paraná
-* Curso: Ciência da Computação
+* Curso: Mestrado em Segurança da Computação - PPG-Inf
 * Motivo: Trabalho da Disciplina de Desempenho de SGBD
 *
 ************************************************************************/
 
-#include "dht.hpp"
+#include <iostream>
+#include <map>
+#include <vector>
+#include <set>
+#include <cmath>
+#include <stdexcept>
+
 using namespace std;
 
-int fingerTable_size = 0;
+/** 
+ * Classe nodo, consiste de um ID inteiro, um vetor (vector) de inteiros para a fingerTable 
+ * e um conjunto de valores (pois não há repetição de chaves) na keyTable
+**/
+class Node {
 
-/***********************************************************************/
+/*************************************************************************
+ * Funções privadas da classe Node
+*************************************************************************/
+public:
+    int id;                              // Idenetificador do nodo
+    vector<int> fingerTable;             // Tabela de roteamente
+    set<int> keyTable;                   // Tabela de valores
 
-void addNode(DHT* dht, int newId) {
+     // Construtor padrão
+    Node() : id(0) {}
 
-    // Verifica se já exisite o novo nodo
-    if (dht->nodes.find(newId) != end(dht->nodes))
-        throw logic_error("This node has already been added.");
-    
-    // Adição de novo nodo
-    dht->nodes[newId] = {};
+    // Construtor com ID
+    Node(int nodeId) : id(nodeId) {}
 
-    // Movemos as chaves se for necessário
-    moveKeys(dht, newId);
-}
+/************************************************************************/
 
-/***********************************************************************/
-
-void moveKeys(DHT* dht, int newId) {
-
-    // Achamos o próximo nodo usando lower_bound
-    auto nextNode = findNode(dht, newId+1);
-
-    // See o próximo é igual ao próprio novo nodo, então estamos no primeiro nodo,
-    // não precisa mover nada
-    if (nextNode == dht->nodes.find(newId)) { 
-        return; 
-    }
-    // Não somos o primeiro nodo ->
-
-    // Antecessor, porque não somos o primeiro
-    auto prevNode = findPrevNode(dht, newId);
-
-    // Movemos nossas chaves
-    set<int> nextKeys;
-
-    for (int key : nextNode->second.keyTable) {
-        if (is_within_bounds(prevNode->first, key, newId)) {
-            dht->nodes[newId].keyTable.insert(key);
-        } else {
-            nextKeys.insert(key);
+    // Função que printa um nodo: id, fingerTable e keyTable, usada para depuração
+    void print() const {
+        // Imprimir fingerTable
+        cout << "Finger Table: ";
+        for (int finger : fingerTable) {
+            cout << finger << " ";
         }
-    }
-    nextNode->second.keyTable = nextKeys;
-}
-
-/***********************************************************************/
-
-map<int, node>::iterator findNode(DHT *dht, int key) {
-    // Encontra o primeiro nodo cuja chave não é menor que key
-    auto position = dht->nodes.lower_bound(key);
-
-    // Retorna o iterador encontrado, ou, se chegar ao fim, retorna o primeiro nó (circular)
-    return (position != dht->nodes.end()) ? position : dht->nodes.begin();
-}
-
-/***********************************************************************/
-
-
-map<int, node>::iterator findPrevNode(DHT* dht, int nodeId) {
-    // Encontra o iterador para o nodo atual
-    auto it = dht->nodes.find(nodeId);
-
-    // Se o iterador aponta para o primeiro elemento, retorna um iterador para o último elemento
-    if (it == dht->nodes.begin()) {
-        return prev(dht->nodes.end());
+        cout << endl;
+        
+        // Imprimir keyTable
+        cout << "Key Table: ";
+        for (int key : keyTable) {
+            cout << key << " ";
+        }
+        cout << endl;
     }
 
-    // Caso contrário, retorna o iterador para o elemento anterior a 'it'.
-    return prev(it);
-}
+/************************************************************************/
 
-/***********************************************************************/
+};
 
-bool is_within_bounds(int start, int value, int end) {
-    // Caso 1: Intervalo normal, não circular (start < end)
-    if (start < end) {
-        // Verifica se value está entre start e end
+
+/** 
+ * Classe DHT, consiste de um map<int, Node> que são os nodos da rede
+**/
+class DHT {
+
+
+/*************************************************************************
+ * Funções privadas da classe DHT
+*************************************************************************/
+
+private:
+    map<int, Node> nodes;                // Nodos da rede armazenados em árvore
+
+/************************************************************************/
+
+    // Função que computa quantos bits são necessários para a fingerTable
+    int fingerTableBits() const {
+        // Verificar se o mapa de nós está vazio
+        if (nodes.empty()) {
+            throw logic_error("Error: empty DHT, no bits to calculate.");
+        }
+
+        // Maior ID
+        int maxId = rbegin(nodes)->first;
+
+        // Verificar se o maior ID é válido (positivo)
+        if (maxId <= 0) {
+            throw logic_error("Error: ID must be positive.");
+        }
+
+        // Calcular o número de bits necessários para a fingerTable
+        // Usando log2 para garantir que o cálculo seja adequado
+        int bits = static_cast<int>(log2(maxId)) + 1;
+
+        // Verificação de overflow para o número de bits calculados (em casos extremos)
+        if (bits <= 0) {
+            throw logic_error("Error: invalid value for bits.");
+        }
+
+        return bits;
+    }
+
+/************************************************************************/
+
+    map<int, Node>::iterator findNode(int key) {
+        // Verificar se o mapa de nós está vazio
+        if (nodes.empty()) {
+            throw logic_error("Error: empty DHT, can't search for something that doesn't exist.");
+        }
+
+        // Buscar o nó mais próximo (menor ou igual à chave)
+        auto position = nodes.lower_bound(key);
+
+        // Caso não tenha encontrado o nó (posição igual ao fim), retorna o primeiro nó
+        return (position != nodes.end()) ? position : nodes.begin();
+    }
+
+/************************************************************************/
+
+    map<int, Node>::iterator findPrevNode(int nodeId) {
+        // Verificar se o mapa de nós está vazio
+        if (nodes.empty()) {
+            throw logic_error("Error: empty DHT, can't search for prev of something that doesn't exist.");
+        }
+
+        // Tentar encontrar o nó com o nodeId
+        auto it = nodes.find(nodeId);
+        
+        // Verificar se o nó foi encontrado
+        if (it == nodes.end()) {
+            throw logic_error("Error: node not found for this id.");
+        }
+
+        // Se o nó encontrado for o primeiro da lista, retornar o último
+        return (it == nodes.begin()) ? prev(nodes.end()) : prev(it);
+    }
+
+/************************************************************************/
+
+    bool is_within_bounds(int start, int value, int end) const {
+        // Se start > end, o valor precisa ser maior que start ou menor ou igual a end
+        if (start > end) {
+            return (value > start) || (value <= end);
+        }
+
+        // Caso contrário, o intervalo é normal [start, end]
         return (value > start) && (value <= end);
     }
 
-    // Caso 2: Intervalo circular (start >= end)
-    // Verifica se valor está em [0, end] ou (start, max]
-    return (value <= end) || (value > start);
-}
+/************************************************************************/
 
-/***********************************************************************/
-
-void addKey(DHT* dht, int key) {
-    if (dht->nodes.empty())
-        throw logic_error("There are no nodes, can't add key");
-    findNode(dht, key)->second.keyTable.insert(key);
-}
-
-/***********************************************************************/
-
-void printNode(const node& n) {
-    // Imprimir fingerTable
-    cout << "Finger Table: ";
-    for (int finger : n.fingerTable) {
-        cout << finger << " ";
-    }
-    cout << endl;
-    
-    // Imprimir keyTable
-    cout << "Key Table: ";
-    for (int key : n.keyTable) {
-        cout << key << " ";
-    }
-    cout << endl;
-}
-
-/***********************************************************************/
-
-void printDHT(const DHT& dht) {
-    if (dht.nodes.empty()) {
-        return;
-    }
-    cout << "DHT Contents: " << endl;
-    for (const auto& pair : dht.nodes) {
-        cout << "Node ID: " << pair.first << endl;
-        printNode(pair.second);
-        cout << endl;
-    }
-}
-
-/***********************************************************************/
-
-void deleteNode(DHT* dht, int nodeId) {
-    if (dht->nodes.find(nodeId) == end(dht->nodes))
-        throw logic_error("Can't remove a node that was never inserted");
-
-    // Guardamos as chaves removidas
-    auto removedKeys = dht->nodes[nodeId].keyTable;
-    dht->nodes.erase(nodeId);
-
-    // Não temeos nada na DHT
-    if (dht->nodes.empty()) {
-        return;
+    void print() const {
+        if (nodes.empty()) {
+            return;
+        }
+        cout << "DHT Contents: " << endl;
+        for (const auto& pair : nodes) {
+            cout << "Node ID: " << pair.first << endl;
+            pair.second.print();
+            cout << endl;
+        }
     }
 
-    // Mandamos a chave para o nodo apropriado
-    auto destiny = findNode(dht, nodeId);
-    for (int key : removed_keys) {
-        destiny->second.keyTable.insert(key);
+/************************************************************************/
+
+/*************************************************************************
+ * Funções públicas da classe DHT
+*************************************************************************/
+
+public:
+
+/************************************************************************/
+
+    void addNode(int newId) {
+        // Verificar se o novo ID é válido
+        if (newId <= 0) {
+            throw logic_error("Error: node ID must be bigger than 0.");
+        }
+
+        // Verificar se o nó já existe
+        if (nodes.find(newId) != nodes.end()) {
+            throw logic_error("Error: node already in the network.");
+        }
+
+        // Adicionar o novo nó
+        nodes[newId] = Node(newId);
+
+        // Gerar a finger table para todos os nós
+        for (auto& nodePair : nodes) {
+            generateFingerTable(nodePair.second.id);
+        }
+
+        // Mover as chaves para o novo nó
+        moveKeys(newId);
     }
-}
+
+/************************************************************************/
+
+    void moveKeys(int newId) {
+        // Verifica se o novo nó existe
+        if (nodes.find(newId) == nodes.end()) {
+            throw logic_error("Error: The node with the specified ID does not exist.");
+        }
+
+        // Encontra o próximo nó
+        auto nextNode = findNode(newId + 1);
+        if (nextNode == nodes.find(newId)) {
+            // Se o próximo nó for o nó atual, não há chaves para mover
+            return;
+        }
+
+        // Encontra o nó anterior
+        auto prevNode = findPrevNode(newId);
+
+        // Verifica se o nó anterior foi encontrado
+        if (prevNode == nodes.end()) {
+            throw logic_error("Error: Could not find the previous node.");
+        }
+        // Verifica se o próximo nó foi encontrado
+        if (nextNode == nodes.end()) {
+            throw logic_error("Error: Could not find the next node.");
+        }
+
+        set<int> nextKeys;
+
+        // Move as chaves para o novo nó
+        for (int key : nextNode->second.keyTable) {
+            if (is_within_bounds(prevNode->first, key, newId)) {
+                nodes[newId].keyTable.insert(key);
+            } else {
+                nextKeys.insert(key);
+            }
+        }
+
+        // Atualiza a tabela de chaves do próximo nó
+        nextNode->second.keyTable = nextKeys;
+    }
+
+/************************************************************************/
+
+    void addKey(int key) {
+        // Verifica se há nós no DHT
+        if (nodes.empty()) {
+            throw logic_error("Error: There are no nodes in the DHT, cannot add key.");
+        }
+
+        // Verifica se o nó correspondente ao key foi encontrado
+        auto nodeIterator = findNode(key);
+        if (nodeIterator == nodes.end()) {
+            throw logic_error("Error: The node corresponding to the key was not found.");
+        }
+
+        // Adiciona a chave ao nó encontrado
+        nodeIterator->second.keyTable.insert(key);
+    }
+
+/************************************************************************/
+
+    void deleteNode(int nodeId) {
+        // Verifica se o nó existe no DHT antes de tentar removê-lo
+        if (nodes.find(nodeId) == nodes.end()) {
+            throw logic_error("Error: Cannot remove a node that was never inserted.");
+        }
+
+        // Armazena as chaves removidas do nó
+        auto removedKeys = nodes[nodeId].keyTable;
+
+        // Remove o nó do DHT
+        nodes.erase(nodeId);
+
+        // Se o DHT estiver vazio, não há necessidade de mais ações
+        if (nodes.empty()) {
+            return;
+        }
+
+        // Encontra o nó destino para mover as chaves removidas
+        auto destiny = findNode(nodeId);
+        if (destiny == nodes.end()) {
+            throw logic_error("Error: The destination node for key reassignment could not be found.");
+        }
+
+        // Reatribui as chaves removidas ao nó destino
+        for (int key : removedKeys) {
+            destiny->second.keyTable.insert(key);
+        }
+    }
+
+/************************************************************************/
+
+    void generateFingerTable(int nodeId) {
+        // Verifica se o DHT está vazio
+        if (nodes.empty()) {
+            throw logic_error("Error: The DHT is empty, cannot generate finger table.");
+        }
+
+        // Obtém o número de bits necessários para a finger table
+        int ftBits = fingerTableBits();
+
+        // Cria o vetor de finger table
+        vector<int> fingers(ftBits);
+
+        // Preenche a finger table com os IDs dos nós
+        for (int i = 0; i < ftBits; i++) {
+            int fingerId = (nodeId + (1 << i)) % (1 << ftBits);
+
+            // Verifica se o nó correspondente ao fingerId existe
+            auto fingerNode = findNode(fingerId);
+            if (fingerNode == nodes.end()) {
+                throw logic_error("Error: Finger node not found for fingerId " + to_string(fingerId));
+            }
+
+            fingers[i] = fingerNode->second.id;
+        }
+
+        // Atribui a finger table ao nó
+        nodes[nodeId].fingerTable = fingers;
+    }
+
+/************************************************************************/
+
+    void lookupKey(int time, int nodeId, int key) {
+        // Verifica se o DHT está vazio
+        if (nodes.empty()) {
+            throw logic_error("Error: The DHT is empty, cannot perform key lookup.");
+        }
+
+        // Verifica se o nó inicial existe
+        if (nodes.find(nodeId) == nodes.end()) {
+            throw logic_error("Error: Node with ID " + to_string(nodeId) + " does not exist.");
+        }
+
+        // Inicia a pesquisa pela chave
+        cout << time << " L " << key << " {";
+
+        int ftBits = fingerTableBits();
+        cout << nodeId;
+
+        vector<Node> path;
+
+        // Continua a busca até encontrar a chave
+        while (!nodes[nodeId].keyTable.count(key)) {
+            path.push_back(nodes[nodeId]);
+
+            // Calcula o próximo nó a ser visitado
+            int nextNode = __lg(((min((1 << ftBits), key) - nodeId) % (1 << ftBits) + (1 << ftBits)) % (1 << ftBits));
+
+            nodeId = nodes[nodeId].fingerTable[nextNode];
+            cout << "," << nodeId;
+        }
+
+        cout << "}\n";
+
+        path.push_back(nodes[nodeId]);
+
+        // Exibe o caminho percorrido
+        for (const Node& node : path) {
+            cout << time << " T " << node.id << " {";
+            bool first = true;
+            for (int fingerId : node.fingerTable) {
+                if (!first) {
+                    cout << ",";
+                }
+                cout << fingerId;
+                first = false;
+            }
+            cout << "}\n";
+        }
+    }
+};

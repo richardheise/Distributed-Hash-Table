@@ -7,7 +7,6 @@ CXXFLAGS = -Wall
 
 # Arquivos de código-fonte
 SOURCES = main.cpp dht.cpp
-HEADERS = dht.hpp
 
 # Objetos compilados
 OBJECTS = $(SOURCES:.cpp=.o)
@@ -20,7 +19,7 @@ $(TARGET): $(OBJECTS)
 	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJECTS)
 
 # Como compilar os arquivos .cpp em .o
-%.o: %.cpp $(HEADERS)
+%.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # Limpeza dos arquivos temporários
