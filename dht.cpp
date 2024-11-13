@@ -88,18 +88,18 @@ private:
         int maxId = rbegin(nodes)->first;
 
         // Verificar se o maior ID é válido (positivo)
-        if (maxId <= 0) {
+        if (maxId < 0) {
             throw logic_error("Error: ID must be positive.");
+        }
+
+        // Se o ID é zero o cálculo abaixo não funciona
+        if (maxId == 0) { 
+            return 0;
         }
 
         // Calcular o número de bits necessários para a fingerTable
         // Usando log2 para garantir que o cálculo seja adequado
         int bits = static_cast<int>(log2(maxId)) + 1;
-
-        // Verificação de overflow para o número de bits calculados (em casos extremos)
-        if (bits <= 0) {
-            throw logic_error("Error: invalid value for bits.");
-        }
 
         return bits;
     }
@@ -153,20 +153,6 @@ private:
 
 /************************************************************************/
 
-    void print() const {
-        if (nodes.empty()) {
-            return;
-        }
-        cout << "DHT Contents: " << endl;
-        for (const auto& pair : nodes) {
-            cout << "Node ID: " << pair.first << endl;
-            pair.second.print();
-            cout << endl;
-        }
-    }
-
-/************************************************************************/
-
 /*************************************************************************
  * Funções públicas da classe DHT
 *************************************************************************/
@@ -177,8 +163,8 @@ public:
 
     void addNode(int newId) {
         // Verificar se o novo ID é válido
-        if (newId <= 0) {
-            throw logic_error("Error: node ID must be bigger than 0.");
+        if (newId < 0) {
+            throw logic_error("Error: node ID must be a positive integer.");
         }
 
         // Verificar se o nó já existe
@@ -190,8 +176,8 @@ public:
         nodes[newId] = Node(newId);
 
         // Gerar a finger table para todos os nós
-        for (auto& nodePair : nodes) {
-            generateFingerTable(nodePair.second.id);
+        for (auto& node : nodes) {
+            generateFingerTable(node.second.id);
         }
 
         // Mover as chaves para o novo nó
@@ -287,6 +273,11 @@ public:
         for (int key : removedKeys) {
             destiny->second.keyTable.insert(key);
         }
+
+        // Gerar a finger table para todos os nós
+        for (auto& node : nodes) {
+            generateFingerTable(node.second.id);
+        }
     }
 
 /************************************************************************/
@@ -368,6 +359,20 @@ public:
                 first = false;
             }
             cout << "}\n";
+        }
+    }
+
+/************************************************************************/
+
+    void print() const {
+        if (nodes.empty()) {
+            return;
+        }
+        cout << "DHT Contents: " << endl;
+        for (const auto& pair : nodes) {
+            cout << "Node ID: " << pair.first << endl;
+            pair.second.print();
+            cout << endl;
         }
     }
 };

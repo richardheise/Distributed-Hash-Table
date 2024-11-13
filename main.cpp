@@ -21,11 +21,11 @@ int main() {
         istringstream iss(line);
         int timestamp;
         char operation;
-        int node_id;
+        int nodeId;
         int key = -1; // Opcional, só é necessário para as operações I e L
 
         // Lê os 3 ou 4 campos da entrada
-        iss >> timestamp >> operation >> node_id;
+        iss >> timestamp >> operation >> nodeId;
 
         // Lê a chave apenas para operações de inserção ou lookup
         if (operation == 'I' || operation == 'L') {
@@ -35,21 +35,27 @@ int main() {
         // Processa a operação
         switch (operation) {
             case 'E': // Add nodo
-                dht.addNode(node_id);
+                // cout << "Fazendo inserção do nodo: " << nodeId << " time -" << timestamp << endl;
+                dht.addNode(nodeId);
                 break;
             case 'S': // Remove nodo
-                dht.deleteNode(node_id);
+                // cout << "Fazendo remoção do nodo: " << nodeId << " time -" << timestamp << endl;
+                dht.deleteNode(nodeId);
                 break;
             case 'I': // Inclusão de chave
+                // cout << "Fazendo adição da chave" << key <<  " no nodo: " << nodeId << " time -" << timestamp << endl;
                 dht.addKey(key);
                 break;
             case 'L': // Lookup de chave
-                dht.lookupKey(timestamp, node_id, key);
+                //  cout << "Fazendo lookup da chave " << key <<  " no nodo: " << nodeId << " time - " << timestamp << endl;
+                dht.lookupKey(timestamp, nodeId, key);
                 break;
             default:
                 cerr << "Operação desconhecida: " << operation << endl;
                 break;
         }
+        // cout << " ========================= " << endl;
+        // dht.print();
     }
     return 0;
 }
