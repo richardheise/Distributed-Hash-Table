@@ -54,8 +54,6 @@ int main() {
                 cerr << "Operação desconhecida: " << operation << endl;
                 break;
         }
-        // cout << " ========================= " << endl;
-        // dht.print();
     }
     return 0;
 }

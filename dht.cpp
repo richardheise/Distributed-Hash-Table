@@ -99,21 +99,21 @@ private:
 
         // Calcular o número de bits necessários para a fingerTable
         // Usando log2 para garantir que o cálculo seja adequado
-        int bits = static_cast<int>(log2(maxId)) + 1;
+        int bits = static_cast<int>(floor(log2(maxId))) + 1;
 
         return bits;
     }
 
 /************************************************************************/
 
-    map<int, Node>::iterator findNode(int key) {
+    map<int, Node>::iterator findNode(int nodeId) {
         // Verificar se o mapa de nós está vazio
         if (nodes.empty()) {
             throw logic_error("Error: empty DHT, can't search for something that doesn't exist.");
         }
 
         // Buscar o nó mais próximo (menor ou igual à chave)
-        auto position = nodes.lower_bound(key);
+        auto position = nodes.lower_bound(nodeId);
 
         // Caso não tenha encontrado o nó (posição igual ao fim), retorna o primeiro nó
         return (position != nodes.end()) ? position : nodes.begin();
@@ -141,7 +141,7 @@ private:
 
 /************************************************************************/
 
-    bool is_within_bounds(int start, int value, int end) const {
+    bool isWithinBounds(int start, int value, int end) const {
         // Se start > end, o valor precisa ser maior que start ou menor ou igual a end
         if (start > end) {
             return (value > start) || (value <= end);
@@ -215,7 +215,7 @@ public:
 
         // Move as chaves para o novo nó
         for (int key : nextNode->second.keyTable) {
-            if (is_within_bounds(prevNode->first, key, newId)) {
+            if (isWithinBounds(prevNode->first, key, newId)) {
                 nodes[newId].keyTable.insert(key);
             } else {
                 nextKeys.insert(key);
@@ -350,13 +350,13 @@ public:
         // Exibe o caminho percorrido
         for (const Node& node : path) {
             cout << time << " T " << node.id << " {";
-            bool first = true;
+            bool isFirst = true;
             for (int fingerId : node.fingerTable) {
-                if (!first) {
+                if (!isFirst) {
                     cout << ",";
                 }
                 cout << fingerId;
-                first = false;
+                isFirst = false;
             }
             cout << "}\n";
         }
