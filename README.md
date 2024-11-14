@@ -53,12 +53,7 @@ As funções dignas de menção são:
     - Aqui, não usamos a busca para verificar onde inserir a chave. Apenas a inserimos no nó correto via a função `findNode()`.
 
 - `lookupKey(int time, int nodeId, int key)`:
-    - Esta é a função mais complexa do código. Imprimimos o caminho que percorremos na rede para encontrar o nó que possui a chave. Lembre-se, podemos buscar uma chave por meio de qualquer nó. A função usada para encontrar o próximo nó é:
-    
-\[
-\log_2 \left( \left( \left( \min(2^{\text{ftBits}}, \text{key}) - \text{nodeId} \right) \mod 2^{\text{ftBits}} + 2^{\text{ftBits}} \right) \mod 2^{\text{ftBits}} \right)
-\]
-    que utiliza a distância entre onde estamos e onde precisamos estar para encontrar a chave de forma modular.
+    - Esta é a função mais complexa do código. Imprimimos o caminho que percorremos na rede para encontrar o nó que possui a chave. Lembre-se, podemos buscar uma chave por meio de qualquer nó. A função usada para encontrar o próximo nó é: log2((min(pow(2, ftBits), key) - nodeId) % pow(2, ftBits) + pow(2, ftBits)) % pow(2, ftBits)). que utiliza a distância entre onde estamos e onde precisamos estar para encontrar a chave de forma modular.
 
 ### Experimentos
 Realizados pelo professor.

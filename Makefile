@@ -3,7 +3,7 @@ TARGET = mydht
 
 # Compilador e flags de compilação
 CXX = g++
-CXXFLAGS = -Wall -g
+CXXFLAGS = -Wall
 
 # Arquivos de código-fonte
 SOURCES = main.cpp dht.cpp
