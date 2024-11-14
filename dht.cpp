@@ -348,15 +348,13 @@ public:
         path.push_back(nodes[nodeId]);
 
         // Exibe o caminho percorrido
-        for (const Node& node : path) {
-            cout << time << " T " << node.id << " {";
-            bool isFirst = true;
-            for (int fingerId : node.fingerTable) {
-                if (!isFirst) {
+        for (const Node& currentNode : path) {
+            cout << time << " T " << currentNode.id << " {";
+            for (size_t i = 0; i < currentNode.fingerTable.size(); ++i) {
+                if (i > 0) {
                     cout << ",";
                 }
-                cout << fingerId;
-                isFirst = false;
+                cout << currentNode.fingerTable[i];
             }
             cout << "}\n";
         }
